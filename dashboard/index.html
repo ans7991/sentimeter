@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <title></title>
+    <style>
+    </style>
+  </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script src="./d3pie.js"></script>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <body>
+    <div id="hdfc" style="position:absolute; top:0;right:0;"></div>
+    <div id="wellsfargo" style="position:absolute; top:0;left:0;"></div>
+    <div id="westpac" style="position:absolute; bottom:0;left:0;"></div>
+    <div id="barclays" style="position:absolute; bottom:0;right:0;"></div>    
+    <div id="pie" align="center" vertical-align="middle"></div>        
+  </body>
+  <script>
+    
+   var facts = {};    
+   var sentimentData = {};
+
+   sentimentData["hdfc"] = {sad: 1, happy: 1};
+   sentimentData["wellsfargo"] = {sad: 1, happy: 1};
+   sentimentData["westpac"] = {sad: 1, happy: 1};
+   sentimentData["barclays"] = {sad: 1, happy: 1};
+
+
+    facts["hdfc"] = { chart: new d3pie("hdfc", { header: {title: { text: "HDFC"}}, 
+                                                size: { pieOuterRadius: "80%", canvasHeight: 400, canvasWidth: 400},
+                                                data: {content: [{label: "sad", color: "#e53333", value: sentimentData["hdfc"].sad},
+                                                                 {label: "happy", value: sentimentData["hdfc"].happy}]}})};
+                              
+    facts["wellsfargo"] = { chart: new d3pie("wellsfargo", { header: {title: { text: "WELLSFARGO"}},
+                                                size: { pieOuterRadius: "80%", canvasHeight: 400, canvasWidth: 400},
+                                                data: {content: [{label: "sad", color: "#e53333", value: sentimentData["wellsfargo"].sad},
+                                                                 {label: "happy", value: sentimentData["wellsfargo"].happy}]}})};
+
+    facts["westpac"] = { chart: new d3pie("westpac", { header: {title: { text: "WESTPAC"}},
+                                                  size: { pieOuterRadius: "80%", canvasHeight: 400, canvasWidth: 400},
+                                                  data: {content: [{label: "sad", color: "#e53333", value: sentimentData["westpac"].sad},
+                                                                 {label: "happy", value: sentimentData["westpac"].happy}]}})};
+    
+    facts["barclays"] = { chart: new d3pie("barclays", { header: {title: { text: "BARCLAYS"}},
+                                                    size: { pieOuterRadius: "80%", canvasHeight: 400, canvasWidth: 400},
+                                                    data: {content: [{label: "sad", color: "#e53333", value: sentimentData["barclays"].sad},
+                                                                 {label: "happy", value: sentimentData["barclays"].happy}]}})};
+
+     var data = [
+      { label: "hdfc", value: 1 },
+      { label: "axis", value: 1 },
+      { label: "barclays", value: 1},
+      { label: "westpac", value: 1},
+      { label: "citi", value: 1},
+      { label: "wellsfargo", value: 1},
+      { label: "suncorpbank", value: 1},
+      { label: "bankofengland", value: 1},
+      { label: "hsbc", value: 1}];
+      
+  var socket = io();
+  var pie = new d3pie("pie", {  header: { title: { text: "Who is being discussed?"}},
+                                size: { pieOuterRadius: "80%", canvasHeight: 500, canvasWidth: 500},
+                                data: {content: data}});
+
+
+socket.on('feed', function(msg){
+    var response = JSON.parse(msg)
+    var bank = response.new_val.filter_term;
+    for (i = 0; i < 6; i++) {      
+      if (data[i].label == bank) {
+        //console.log(data[i]); 
+        data[i].value = data[i].value + 1;
+        //console.log(data[i]);
+        pie.updateProp("data.content", data);
+        break; 
+      }        
+    }});
+
+
+socket.on('classified', function(msg){
+    var response = JSON.parse(msg)     
+    //console.log(response);
+    var bank = response.new_val.new_val.filter_term;
+    if (["hdfc", "wellsfargo", "westpac", "barclays"].indexOf(bank) != -1)
+    {
+      console.log(response);   
+      var sentiment = response.new_val.new_val.sentiment;    
+      var chart = facts[bank].chart;
+      if (sentiment < 1) sentimentData[bank].sad++;
+      else sentimentData[bank].happy++;
+      console.log(sentimentData[bank]);
+      var template = [{label: "sad", color: "#e53333", value: sentimentData[bank].sad}, {label: "happy", value: sentimentData[bank].happy}];
+      chart.updateProp("data.content", template);
+    }});    
+</script>
+</html>
